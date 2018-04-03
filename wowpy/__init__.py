@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from urllib.parse import quote
 
@@ -28,6 +29,7 @@ class WowAPI(object):
 
         req = requests.get(i_url, params=dados)
         if req.status_code != 200:
+            print(i_url, dados, req)
             raise WowAPIError()
 
         return req.json()
@@ -43,6 +45,25 @@ class WowAPI(object):
             data = None
 
         return self._get('/character/{}/{}'.format(realm, charname), data)
+
+    def multi(self, fnc: str, param_list: tuple) -> list:
+        fnc_point = getattr(self, fnc, None)
+        if not fnc_point:
+            raise WowAPIError('Invalid function')
+
+        result = []
+        with ThreadPoolExecutor(max_workers=None) as executor:
+            futures = {}
+            for parameters in param_list:
+                if isinstance(parameters, dict):
+                    futures[executor.submit(fnc_point, **parameters)] = parameters
+                else:
+                    futures[executor.submit(fnc_point, *parameters)] = parameters
+
+            for future in as_completed(futures):
+                result.append((futures[future], future.result()))
+
+        return result
 
     # Game services
     def game_achievement_info(self, achievement_id):
