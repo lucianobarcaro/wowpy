@@ -2,4 +2,3 @@ test*.py
 *.dump
 *.pyc
 .idea
-venv

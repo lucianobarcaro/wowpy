@@ -17,7 +17,8 @@ class WowAPI(object):
         self._api_key = api_key
         self._locale = locale
 
-    def _get(self, url: str, data: dict=None) -> dict:
+    def _iget(self, url: str, data: dict=None) -> dict:
+        """Internal use only"""
         dados = {
             'locale': self._locale,
             'apiKey': self._api_key
@@ -28,14 +29,22 @@ class WowAPI(object):
         i_url = self._url + quote(url)
 
         req = requests.get(i_url, params=dados)
-        if req.status_code != 200:
-            print(i_url, dados, req)
-            raise WowAPIError()
 
+        # Mesmo se houver erro, retorna aqui
         return req.json()
 
     # Character services ----------------------
     def char_info(self, realm: str, charname: str, details: list=None) -> dict:
+        """Get info from specific char.
+  *** Input parameters:
+    * realm: Realm of the char...
+    * charname:
+    * details (optional): List of required details. Valid values are: achievements, appearance, feed, guild, hunterPets, audit,
+              items, mounts, pets, petSlots, professions, progression, pvp, quests, reputation, statistics, stats, talents, titles
+  *** Returns a dict with required info
+
+  example: ret = WowApi.char_info('testRealm', 'testChar', ['quests', 'feed', 'guild'])
+"""
         valid_details = ('achievements', 'appearance', 'feed', 'guild', 'hunterPets', 'items', 'mounts', 'pets', 'petSlots',
                          'professions', 'progression', 'pvp', 'quests', 'reputation', 'statistics', 'stats', 'talents', 'titles',
                          'audit')
@@ -44,9 +53,19 @@ class WowAPI(object):
         else:
             data = None
 
-        return self._get('/character/{}/{}'.format(realm, charname), data)
+        return self._iget('/character/{}/{}'.format(realm, charname), data)
 
     def multi(self, fnc: str, param_list: tuple) -> list:
+        """Get info from specific char.
+  *** Input parameters:
+    * realm: Realm of the char...
+    * charname:
+    * details (optional): List of required details. Valid values are: achievements, appearance, feed, guild, hunterPets, audit,
+              items, mounts, pets, petSlots, professions, progression, pvp, quests, reputation, statistics, stats, talents, titles
+  *** Returns a dict with required info
+
+  example: ret = WowApi.char_info('testRealm', 'testChar', ['quests', 'feed', 'guild'])
+"""
         fnc_point = getattr(self, fnc, None)
         if not fnc_point:
             raise WowAPIError('Invalid function')
@@ -69,107 +88,107 @@ class WowAPI(object):
     def game_achievement_info(self, achievement_id):
         assert isinstance(achievement_id, int)
 
-        return self._get('/achievement/{}'.format(achievement_id))
+        return self._iget('/achievement/{}'.format(achievement_id))
 
     def game_auction_data(self, realm):
-        resp = self._get('/auction/data/{realm}'.format(realm=realm))
+        resp = self._iget('/auction/data/{realm}'.format(realm=realm))
         retorno = []
         for file in resp['files']:
-            retorno.append((file['lastModified'], requests.get(file['url'])))
+            retorno.append({'lastModified': file['lastModified'], 'data': requests.get(file['url']).json()})
 
         return retorno
 
     def game_boss_list(self):
-        return self._get('/boss/')
+        return self._iget('/boss/')
 
     def game_boss_info(self, boss_id):
         assert isinstance(boss_id, int)
 
-        return self._get('/boss/{}'.format(boss_id))
+        return self._iget('/boss/{}'.format(boss_id))
 
     def game_challenge_realm_leaderboard(self, realm):
-        return self._get('/challenge/{}'.format(realm))
+        return self._iget('/challenge/{}'.format(realm))
 
     def game_challenge_region_leaderboard(self):
-        return self._get('/challenge/region')
+        return self._iget('/challenge/region')
 
     def game_item_info(self, item_id):
         assert isinstance(item_id, int)
 
-        return self._get('/item/{}'.format(item_id))
+        return self._iget('/item/{}'.format(item_id))
 
     def game_item_set(self, itemset_id):
         assert isinstance(itemset_id, int)
 
-        return self._get('/item/set/{}'.format(itemset_id))
+        return self._iget('/item/set/{}'.format(itemset_id))
 
     def game_mount_list(self):
-        return self._get('/mount/')
+        return self._iget('/mount/')
 
     def game_pvp_leaderboards(self, bracket='rbg'):
         if bracket not in ('2v2', '3v3', '5v5', 'rbg'):
             raise WowAPIError('Invalid pvp bracket')
 
-        return self._get('/leaderboard/{}'.format(bracket))
+        return self._iget('/leaderboard/{}'.format(bracket))
 
     def game_quest_info(self, quest_id):
         assert isinstance(quest_id, int)
 
-        return self._get('/quest/{}'.format(quest_id))
+        return self._iget('/quest/{}'.format(quest_id))
 
     def game_realm_status(self, realms=None):
         data = {'realms': ','.join(realms)} if realms else None
-        return self._get('/realm/status', data)
+        return self._iget('/realm/status', data)
 
     def game_recipe_info(self, recipe_id):
         assert isinstance(recipe_id, int)
 
-        return self._get('/recipe/{}'.format(recipe_id))
+        return self._iget('/recipe/{}'.format(recipe_id))
 
     def game_spell_info(self, spell_id):
         assert isinstance(spell_id, int)
 
-        return self._get('/spell/{}'.format(spell_id))
+        return self._iget('/spell/{}'.format(spell_id))
 
     def game_zone_list(self):
-        return self._get('/zone/')
+        return self._iget('/zone/')
 
     def game_zone_info(self, zone_id):
         assert isinstance(zone_id, int)
 
-        return self._get('/zone/{}'.format(zone_id))
+        return self._iget('/zone/{}'.format(zone_id))
 
     def game_battlegroups_list(self):
-        return self._get('/data/battlegroups/')
+        return self._iget('/data/battlegroups/')
 
     def game_races_list(self):
-        return self._get('/data/character/races')
+        return self._iget('/data/character/races')
 
     def game_classes_list(self):
-        return self._get('/data/character/classes')
+        return self._iget('/data/character/classes')
 
     def game_achievements_list(self):
-        return self._get('/data/character/achievements')
+        return self._iget('/data/character/achievements')
 
     def game_itemclass_list(self):
-        return self._get('/data/item/classes')
+        return self._iget('/data/item/classes')
 
     def game_talents_list(self):
-        return self._get('/data/talents')
+        return self._iget('/data/talents')
 
     # pet services
     def pet_list(self):
-        return self._get('/pet/')
+        return self._iget('/pet/')
 
     def pet_ability(self, ability_id):
         assert isinstance(ability_id, int)
 
-        return self._get('/pet/ability/{}'.format(ability_id))
+        return self._iget('/pet/ability/{}'.format(ability_id))
 
     def pet_species(self, species_id):
         assert isinstance(species_id, int)
 
-        return self._get('/pet/species/{}'.format(species_id))
+        return self._iget('/pet/species/{}'.format(species_id))
 
     def pet_stats(self, species_id, level=1, breed_id=3, quality_id=1):
         assert isinstance(species_id, int) | isinstance(level, int) | isinstance(breed_id, int) | isinstance(quality_id, int)
@@ -180,10 +199,10 @@ class WowAPI(object):
             'qualityId': quality_id
         }
 
-        return self._get('/pet/stats/{}'.format(species_id), data)
+        return self._iget('/pet/stats/{}'.format(species_id), data)
 
     def pet_types_list(self):
-        return self._get('/data/pet/types')
+        return self._iget('/data/pet/types')
 
     # Guild services
     def guild_info(self, realm, guild_name, details=None):
@@ -193,13 +212,13 @@ class WowAPI(object):
         else:
             data = None
 
-        return self._get('/guild/{}/{}'.format(realm, guild_name), data)
+        return self._iget('/guild/{}/{}'.format(realm, guild_name), data)
 
     def guild_rewards_list(self):
-        return self._get('/data/guild/rewards')
+        return self._iget('/data/guild/rewards')
 
     def guild_perks_list(self):
-        return self._get('/data/guild/perks')
+        return self._iget('/data/guild/perks')
 
     def guild_achievements_list(self):
-        return self._get('/data/guild/achievements')
+        return self._iget('/data/guild/achievements')
