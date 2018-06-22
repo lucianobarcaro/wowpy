@@ -10,12 +10,17 @@ class WowAPIError(Exception):
 
 class WowAPI(object):
     def __init__(self, api_key: str, region: str='us', locale: str='en_US') -> None:
-        if region.lower() not in ('us', 'eu', 'kr', 'tw'):
+        self._region_list = ['us', 'eu', 'kr', 'tw']
+        self._locale_list = ['en_US', 'es_MX', 'pt_BR', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU', 'ko_KR', 'zh_TW', 'zh_CN']
+
+        if region.lower() not in self._region_list or \
+           locale not in self._locale_list:
             raise WowAPIError()
 
         self._url = 'https://{}.api.battle.net/wow'.format(region)
         self._api_key = api_key
         self._locale = locale
+        self._multi_size = 50
 
     def _iget(self, url: str, data: dict=None) -> dict:
         """Internal use only"""
