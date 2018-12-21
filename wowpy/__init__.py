@@ -95,11 +95,12 @@ class WowAPI(object):
 
         return self._iget('/achievement/{}'.format(achievement_id))
 
-    def game_auction_data(self, realm):
+    def game_auction_data(self, realm, lastModified=0):
         resp = self._iget('/auction/data/{realm}'.format(realm=realm))
         retorno = []
         for file in resp['files']:
-            retorno.append({'lastModified': file['lastModified'], 'data': requests.get(file['url']).json()})
+            if file['lastModified'] > lastModified:
+                retorno.append({'lastModified': file['lastModified'], 'data': requests.get(file['url']).json()})
 
         return retorno
 
