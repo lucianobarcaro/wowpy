@@ -1,6 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from urllib.parse import quote
+from datetime import datetime, timedelta
+from base64 import b64encode
+from os import path
+import pickle
 
 
 class WowAPIError(Exception):
@@ -9,7 +13,7 @@ class WowAPIError(Exception):
 
 
 class WowAPI(object):
-    def __init__(self, api_key: str, region: str='us', locale: str='en_US') -> None:
+    def __init__(self, client_secret: str, region: str='us', locale: str='en_US') -> None:
         self._region_list = ['us', 'eu', 'kr', 'tw']
         self._locale_list = ['en_US', 'es_MX', 'pt_BR', 'de_DE', 'es_ES', 'fr_FR', 'it_IT', 'pt_PT', 'ru_RU', 'ko_KR', 'zh_TW', 'zh_CN']
 
@@ -17,23 +21,46 @@ class WowAPI(object):
            locale not in self._locale_list:
             raise WowAPIError()
 
-        self._url = 'https://{}.api.battle.net/wow'.format(region)
-        self._api_key = api_key
+        self._url = 'https://{}.api.blizzard.com/wow'.format(region)
+        self._url_token = 'https://{}.battle.net/oauth/token'.format(region)
+        self._client_secret = client_secret
+        self._client_id = '506d11fa07534228b81cec328fb112b3'
         self._locale = locale
         self._multi_size = 50
+        self._auth_header = {}
+        self._date_token = datetime(2000, 1, 1)
+
+    def get_access_token(self):
+        if datetime.now() >= self._date_token or not self._auth_header:
+            tmp_file_token = '/tmp/wow_token.tmp'
+            if path.isfile(tmp_file_token):
+                dados = pickle.loads(open('/tmp/wow_token.tmp', 'rb').read())
+            else:
+
+                auth = b64encode('{}:{}'.format(self._client_id, self._client_secret).encode('ascii')).decode('ascii')
+
+                req = requests.get(self._url_token,
+                                   headers={'Authorization': 'Basic {}'.format(auth)},
+                                   params={'grant_type': 'client_credentials'})
+                dados = req.json()
+                with open(tmp_file_token, 'wb') as saida:
+                    saida.write(pickle.dumps(dados))
+
+            self._auth_header['Authorization'] = 'Bearer {}'.format(dados['access_token'])
+            self._date_token = datetime.now() + timedelta(seconds=dados.get('expires_in') - 2)
 
     def _iget(self, url: str, data: dict=None, locale: str=None) -> dict:
         """Internal use only"""
-        dados = {
-            'locale': locale or self._locale,
-            'apiKey': self._api_key
-        }
+        dados = {'locale': locale or self._locale}
+
+        self.get_access_token()
+
         if isinstance(data, dict):
             dados.update(data)
 
         i_url = self._url + quote(url)
 
-        req = requests.get(i_url, params=dados)
+        req = requests.get(i_url, params=dados, headers=self._auth_header)
 
         # Mesmo se houver erro, retorna aqui
         return req.json()
