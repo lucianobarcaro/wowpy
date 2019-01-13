@@ -31,23 +31,23 @@ class WowAPI(object):
         self._date_token = datetime(2000, 1, 1)
 
     def get_access_token(self):
-        if datetime.now() >= self._date_token or not self._auth_header:
+        if datetime.now() >= self._date_token or not self._auth_header.get('Authorization', ''):
             tmp_file_token = '/tmp/wow_token.tmp'
             if path.isfile(tmp_file_token):
-                dados = pickle.loads(open('/tmp/wow_token.tmp', 'rb').read())
+                dados = pickle.loads(open(tmp_file_token, 'rb').read())
             else:
-
                 auth = b64encode('{}:{}'.format(self._client_id, self._client_secret).encode('ascii')).decode('ascii')
 
                 req = requests.get(self._url_token,
                                    headers={'Authorization': 'Basic {}'.format(auth)},
                                    params={'grant_type': 'client_credentials'})
                 dados = req.json()
+                dados['valido_ate'] = datetime.now() + timedelta(seconds=dados.get('expires_in') - 2)
                 with open(tmp_file_token, 'wb') as saida:
                     saida.write(pickle.dumps(dados))
 
+            self._date_token = dados['valido_ate']
             self._auth_header['Authorization'] = 'Bearer {}'.format(dados['access_token'])
-            self._date_token = datetime.now() + timedelta(seconds=dados.get('expires_in') - 2)
 
     def _iget(self, url: str, data: dict=None, locale: str=None) -> dict:
         """Internal use only"""
