@@ -37,6 +37,7 @@ class WowAPI(object):
             if path.isfile(tmp_file_token):  # Já tem um token, vamos ler ele
                 dados = pickle.loads(open(tmp_file_token, 'rb').read())
                 self._date_token = dados['valido_ate']
+                self._auth_header['Authorization'] = 'Bearer {}'.format(dados['access_token'])
 
         if self._date_token < datetime.now():  # Precisa pegar novo token
             auth = b64encode('{}:{}'.format(self._client_id, self._client_secret).encode('ascii')).decode('ascii')
