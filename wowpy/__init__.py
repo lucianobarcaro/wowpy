@@ -28,23 +28,28 @@ class WowAPI(object):
         self._locale = locale
         self._multi_size = 50
         self._auth_header = {}
-        self._date_token = datetime(2000, 1, 1)
+        self._date_token = None
 
     def get_access_token(self):
-        if datetime.now() >= self._date_token or not self._auth_header.get('Authorization', ''):
-            tmp_file_token = '/tmp/wow_token.tmp'
-            if path.isfile(tmp_file_token):
+        tmp_file_token = '/tmp/wow_token.tmp'
+        if not self._date_token:  # Não tem data, é a primeira vez
+            self._date_token = datetime(2000, 1, 1)
+            if path.isfile(tmp_file_token):  # Já tem um token, vamos ler ele
                 dados = pickle.loads(open(tmp_file_token, 'rb').read())
-            else:
-                auth = b64encode('{}:{}'.format(self._client_id, self._client_secret).encode('ascii')).decode('ascii')
+                self._date_token = dados['valido_ate']
 
-                req = requests.get(self._url_token,
-                                   headers={'Authorization': 'Basic {}'.format(auth)},
-                                   params={'grant_type': 'client_credentials'})
-                dados = req.json()
-                dados['valido_ate'] = datetime.now() + timedelta(seconds=dados.get('expires_in') - 2)
-                with open(tmp_file_token, 'wb') as saida:
-                    saida.write(pickle.dumps(dados))
+        if self._date_token < datetime.now():  # Precisa pegar novo token
+            auth = b64encode('{}:{}'.format(self._client_id, self._client_secret).encode('ascii')).decode('ascii')
+
+            req = requests.get(self._url_token,
+                               headers={'Authorization': 'Basic {}'.format(auth)},
+                               params={'grant_type': 'client_credentials'})
+
+            dados = req.json()
+            dados['valido_ate'] = datetime.now() + timedelta(seconds=dados.get('expires_in') - 2)
+
+            with open(tmp_file_token, 'wb') as saida:
+                saida.write(pickle.dumps(dados))
 
             self._date_token = dados['valido_ate']
             self._auth_header['Authorization'] = 'Bearer {}'.format(dados['access_token'])
